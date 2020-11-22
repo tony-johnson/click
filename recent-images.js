@@ -26,27 +26,29 @@ export class RecentImages extends LitElement {
 
   static get properties() {
     return {
-      rows: { type: Number },
-      dataURL: { type: String },
+      rows: { type: Number, notify: true, reflect: true },
+      restURL: { type: String },
       data: { type: Object, notify: true },
-      playClick: { type: Boolean, notify: true, reflect: true},
-      playAlarm: { type: Boolean, notify: true, reflect: true},
-      alarmSeconds: { type: Number, notify: true, reflect: true},
-      alarmCountdown: { type: Number, notify: true, reflect: true},
-      isAlarm: { type: Boolean, notify: true, reflect: true}
+      playClick: { type: Boolean, notify: true, reflect: true },
+      playAlarm: { type: Boolean, notify: true, reflect: true },
+      alarmSeconds: { type: Number, notify: true, reflect: true },
+      alarmCountdown: { type: Number, notify: true, reflect: true },
+      isAlarm: { type: Boolean, notify: true, reflect: true }
     };
   }
 
   constructor() {
     super();
     this.rows = 20;
-    this.restURL = 'https://lsst-camera-dev.slac.stanford.edu/FITSInfo/rest/images?take=20&sort=%5B%7B%22selector%22:%22obsDate%22,%22desc%22:true%7D%5D';
+    this.baseURL = new URL('http://ccs.lsst.org/FITSInfo/');
+    this.restURL = new URL('rest/', this.baseURL,);
+    this.eventSourceURL = new URL('notify', this.restURL);
+    this.viewURL = new URL('view.html', this.baseURL,);
     this.data = [];
-    this.eventSourceUrl = 'https://lsst-camera-dev.slac.stanford.edu/FITSInfo/rest/notify';
     this.click = "sound/camera-shutter-click-03.mp3"
     this.playClick = true;
     this.alarm = "sound/alarm-fast-a1.mp3";
-    this.playAlarm = true;
+    this.playAlarm = false;
     this.alarmSeconds = 60;
     this.isAlarm = false;
     this.alarmCountdown = -1;
@@ -61,7 +63,7 @@ export class RecentImages extends LitElement {
         this.isAlarm = this.alarmCountdown == 0;
       }
     }, 1000);
-    let eventSource = new EventSource(this.eventSourceUrl);
+    let eventSource = new EventSource(this.eventSourceURL);
     eventSource.addEventListener("newImage", (event) => {
       this._updateData();
       if (this.playClick) {
@@ -73,50 +75,49 @@ export class RecentImages extends LitElement {
     this._updateData();
   }
 
-  updated(changedProperties)  {
+  updated(changedProperties) {
     super.update(changedProperties);
     if (changedProperties.has('isAlarm') && this.playAlarm && this.isAlarm) {
       this.alarm.play();
     } else if (changedProperties.has('alarmSeconds') && changedProperties['alarmSeconds']) {
       this.alarmCountdown = this.alarmSeconds;
+    } else if (changedProperties.has('rows')) {
+      this._updateData();
     }
   }
 
   _updateData() {
-    fetch(this.restURL)
+    let url = new URL("images", this.restURL);
+    url.searchParams.append("take", this.rows);
+    url.searchParams.append("sort", '[{"selector":"obsDate","desc":true}]');
+    fetch(url)
       .then(response => response.json())
       .then(data => this.data = data.data);
   }
 
   render() {
-    console.group(this.data);
+    let columns = new Map([
+      ["Image", (row) => html`<a href=${this._imageURL(row.obsId)} target="imageViewer">${row.obsId}</a>`],
+      ["ImgType", (row) => row.imgType],
+      ["TestType", (row) => row.testType],
+      ["Dark Time", (row) => row.darkTime],
+      ["Exp Time", (row) => row.exposureTime],
+      ["Run", (row) => row.runNumber],
+      ["Tseqnum", (row) => row.tseqnum],
+      ["Date", (row) => new Date(row.obsDate).toISOString().substring(0, 19)],
+      ["Rafts", (row) => this._countRafts(row.raftMask)]
+    ]);
     return html`
       <table class="recentImages">
         <thead>
           <tr>
-            <th>Image</th>
-            <th>ImgType</th>
-            <th>TestType</th>
-            <th>Dark Time</th>
-            <th>Exp Time</th>
-            <th>Run</th>
-            <th>Tseqnum</th>
-            <th>Date</th>
-            <th>Rafts</th>
+            ${repeat(columns.keys(), (columnName, index) => html`<th>${columnName}</th>`)}
           </tr>
         </thead>
         <tbody>
           ${repeat(this.data, (row) => row.obsId, (row, index) => html`
             <tr>
-              <td><a href="https://lsst-camera-dev.slac.stanford.edu/FITSInfo/view.html?image=${row.obsId}&raft=all" target="imageViewer">${row.obsId}</a></td>
-              <td>${row.imgType}</td>
-              <td>${row.testType}</td>
-              <td>${row.darkTime}</td>
-              <td>${row.exposureTime}</td>
-              <td>${row.runNumber}</td>
-              <td>${row.tseqnum}</td>
-              <td>${new Date(row.obsDate).toISOString().substring(0, 19)}</td>
-              <td>${this._countRafts(row.raftMask)}</td>
+              ${repeat(columns.values(), (columnMapper, index) => html`<td>${columnMapper(row)}</td>`)}
             </tr>
           `)}
         </tbody>
@@ -124,16 +125,22 @@ export class RecentImages extends LitElement {
       <label><input id="clickCheckbox" type="checkbox" @change=${this._doClick} ?checked=${this.playClick}>Play click on new image</label>
       <label><input id="alarmCheckbox" type="checkbox" @change=${this._doAlarm} ?checked=${this.playAlarm}>Play alarm if no images for
       <input type="number" id="alarmSeconds" value=${this.alarmSeconds} @change=${this._doAlarmSeconds}> seconds</label>
-      ${this.isAlarm ? html `<b>Alarm!</b> ${this.playAlarm ? html `<button @click=${this.silence}>Silence</button>`  : undefined}` : this.alarmCountdown > 0 ? html`(Countdown ${this.alarmCountdown})` : undefined}
+      ${this.isAlarm ? html`<b>Alarm!</b> ${this.playAlarm ? html`<button @click=${this.silence}>Silence</button>` : undefined}` : this.alarmCountdown > 0 ? html`(Countdown ${this.alarmCountdown})` : undefined}
     `;
   }
 
+  _imageURL(obsId) {
+    let imageURL = new URL(this.viewURL);
+    imageURL.searchParams.append("image", obsId);
+    imageURL.searchParams.append("raft", "R22")
+    return imageURL;
+  }
   _countRafts(mask) {
     let n = 0;
     for (let i = 0; i < 25; i++) {
       let raft = mask >> i & 1;
       if (raft) {
-          n++;
+        n++;
       }
     }
     return n;
