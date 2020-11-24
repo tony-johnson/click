@@ -1,7 +1,9 @@
 import { LitElement, html, css } from 'lit-element';
 import { repeat } from 'lit-html/directives/repeat.js';
 
-
+import '@polymer/app-layout/app-scroll-effects/app-scroll-effects.js';
+import '@polymer/app-layout/app-toolbar/app-toolbar.js';
+import '@polymer/app-layout/app-header/app-header.js';
 /**
  * An element for dispaying recent images
  */
@@ -27,7 +29,15 @@ export class RecentImages extends LitElement {
   static get properties() {
     return {
       rows: { type: Number, notify: true, reflect: true },
-      restURL: { type: String },
+      baseURL: {
+        converter: {
+          fromAttribute(value) {
+            return new URL(value);
+          }
+        }
+      },
+      hiddenColumns: { type: Array, notify: true, reflect: true},
+      filter: { type: String, notify: true, reflect: true},
       data: { type: Object, notify: true },
       playClick: { type: Boolean, notify: true, reflect: true },
       playAlarm: { type: Boolean, notify: true, reflect: true },
@@ -41,10 +51,9 @@ export class RecentImages extends LitElement {
     super();
     this.rows = 20;
     this.baseURL = new URL('http://ccs.lsst.org/FITSInfo/');
-    this.restURL = new URL('rest/', this.baseURL,);
-    this.eventSourceURL = new URL('notify', this.restURL);
-    this.viewURL = new URL('view.html', this.baseURL,);
     this.data = [];
+    this.hiddenColumns = [];
+    this.filter = null;
     this.click = "sound/camera-shutter-click-03.mp3"
     this.playClick = true;
     this.alarm = "sound/alarm-fast-a1.mp3";
@@ -55,6 +64,9 @@ export class RecentImages extends LitElement {
   }
 
   firstUpdated(changedProperties) {
+    this.restURL = new URL('rest/', this.baseURL);
+    this.eventSourceURL = new URL('notify', this.restURL);
+    this.viewURL = new URL('view.html', this.baseURL);
     let click = new Audio(this.click);
     this.alarm = new Audio(this.alarm);
     let timer = setInterval(() => {
@@ -89,6 +101,7 @@ export class RecentImages extends LitElement {
   _updateData() {
     let url = new URL("images", this.restURL);
     url.searchParams.append("take", this.rows);
+    if (this.filter) url.searchParams.append("filter", this.filter);
     url.searchParams.append("sort", '[{"selector":"obsDate","desc":true}]');
     fetch(url)
       .then(response => response.json())
@@ -107,6 +120,7 @@ export class RecentImages extends LitElement {
       ["Date", (row) => new Date(row.obsDate).toISOString().substring(0, 19)],
       ["Rafts", (row) => this._countRafts(row.raftMask)]
     ]);
+    this.hiddenColumns.forEach((column)=>columns.delete(column));
     return html`
       <table class="recentImages">
         <thead>
