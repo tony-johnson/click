@@ -16,11 +16,21 @@ import filesize from 'rollup-plugin-filesize';
 import {terser} from 'rollup-plugin-terser';
 import resolve from 'rollup-plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
+import copy from 'rollup-plugin-copy';
+
+const copyConfig = {
+  targets: [
+    { src: 'images', dest: 'build-modern' },
+    { src: 'sound', dest: 'build-modern' },
+    { src: 'auxtel.html', dest: 'build-modern', transform: (contents) => contents.toString().replace('./recent-images.js', './recent-images.bundled.js') },
+    { src: 'comcam.html', dest: 'build-modern', transform: (contents) => contents.toString().replace('./recent-images.js', './recent-images.bundled.js')},
+  ],
+};
 
 export default {
   input: 'recent-images.js',
   output: {
-    file: 'recent-images.bundled.js',
+    file: 'build-modern/recent-images.bundled.js',
     format: 'esm',
   },
   onwarn(warning) {
@@ -34,12 +44,8 @@ export default {
     terser({
       module: true,
       warnings: true,
-      mangle: {
-        properties: {
-          regex: /^__/,
-        },
-      },
     }),
+    copy(copyConfig),
     filesize({
       showBrotliSize: true,
     })

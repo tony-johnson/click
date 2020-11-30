@@ -1,4 +1,2 @@
 /node_modules/
-
-# only generated for size check
-recent-images.bundled.js
+/build-modern/

@@ -36,8 +36,9 @@ export class RecentImages extends LitElement {
           }
         }
       },
-      hiddenColumns: { type: Array, notify: true, reflect: true},
-      filter: { type: String, notify: true, reflect: true},
+      site: { type: String, notify: true },
+      hiddenColumns: { type: Array, notify: true, reflect: true },
+      filter: { type: String, notify: true, reflect: true },
       data: { type: Object, notify: true },
       playClick: { type: Boolean, notify: true, reflect: true },
       playAlarm: { type: Boolean, notify: true, reflect: true },
@@ -51,6 +52,7 @@ export class RecentImages extends LitElement {
     super();
     this.rows = 20;
     this.baseURL = new URL('http://ccs.lsst.org/FITSInfo/');
+    this.site = "comcam";
     this.data = [];
     this.hiddenColumns = [];
     this.filter = null;
@@ -64,7 +66,7 @@ export class RecentImages extends LitElement {
   }
 
   firstUpdated(changedProperties) {
-    this.restURL = new URL('rest/', this.baseURL);
+    this.restURL = new URL('rest/'+this.site+"/", this.baseURL);
     this.eventSourceURL = new URL('notify', this.restURL);
     this.viewURL = new URL('view.html', this.baseURL);
     let click = new Audio(this.click);
@@ -120,7 +122,7 @@ export class RecentImages extends LitElement {
       ["Date", (row) => new Date(row.obsDate).toISOString().substring(0, 19)],
       ["Rafts", (row) => this._countRafts(row.raftMask)]
     ]);
-    this.hiddenColumns.forEach((column)=>columns.delete(column));
+    this.hiddenColumns.forEach((column) => columns.delete(column));
     return html`
       <table class="recentImages">
         <thead>
@@ -178,4 +180,104 @@ export class RecentImages extends LitElement {
   }
 }
 
+export class CCSHeader extends LitElement {
+  static get styles() {
+    return css`
+      :host {
+        display: block;
+      }
+
+      app-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 212px;
+        color: #fff;
+        background-color: #3f51b5;
+      }
+
+      app-toolbar.tall {
+        height: 148px;
+      }
+
+      [main-title] {
+        font-weight: lighter;
+        margin-left: 108px;
+      }
+
+      [condensed-title] {
+        font-weight: lighter;
+        margin-left: 30px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      [condensed-title] i {
+        font-weight: 100;
+        font-style: normal;
+      }
+
+      @media (max-width: 639px) {
+        [main-title] {
+          margin-left: 50px;
+          font-size: 30px;
+        }
+
+        [condensed-title] {
+          font-size: 15px;
+        }
+      }
+
+      #content {
+        padding-top: 212px;
+      }
+    `;
+  }
+
+  static get properties() {
+    return {
+      title: { type: String, notify: true, reflect: true },
+    };
+  }
+
+  constructor() {
+    super();
+    this.title = "CCS";
+  }
+
+  render() {
+    return html`
+      <custom-style>
+        <style is="custom-style">
+          app-header {
+            --app-header-background-front-layer: {
+              background-image: url("images/1128172018_HDR.jpg");
+              background-position: left center;
+            }
+            --app-header-background-rear-layer: {
+              background-image: url("images/bg2.jpg");
+              background-position: left center;
+            }
+          }
+        </style>
+      </custom-style>
+      <app-header-layout>
+        <app-header condenses fixed effects="waterfall resize-title blend-background parallax-background">
+          <app-toolbar>
+            <h4 condensed-title>${this.title}</h4>
+          </app-toolbar>
+        <app-toolbar class="tall">
+          <h1 main-title>${this.title}</h1>
+        </app-toolbar>
+      </app-header>
+      <div id="content">
+        <slot></slot>
+      </div>
+    </app-header-layout>
+    `;
+  }
+}
+
+window.customElements.define('ccs-header', CCSHeader);
 window.customElements.define('recent-images', RecentImages);
