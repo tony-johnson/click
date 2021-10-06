@@ -40,6 +40,7 @@ export class RecentImages extends LitElement {
       hiddenColumns: { type: Array, notify: true, reflect: true },
       filter: { type: String, notify: true, reflect: true },
       data: { type: Object, notify: true },
+      defaultRaft: { type: String, notify: true},
       playClick: { type: Boolean, notify: true, reflect: true },
       playAlarm: { type: Boolean, notify: true, reflect: true },
       alarmSeconds: { type: Number, notify: true, reflect: true },
@@ -63,10 +64,11 @@ export class RecentImages extends LitElement {
     this.alarmSeconds = 60;
     this.isAlarm = false;
     this.alarmCountdown = -1;
+    this.defaultRaft = "R22";
   }
 
   firstUpdated(changedProperties) {
-    this.restURL = new URL('rest/'+this.site+"/", this.baseURL);
+    this.restURL = new URL('rest/' + this.site + "/", this.baseURL);
     this.eventSourceURL = new URL('notify', this.restURL);
     this.viewURL = new URL('view.html', this.baseURL);
     let click = new Audio(this.click);
@@ -148,9 +150,10 @@ export class RecentImages extends LitElement {
   _imageURL(obsId) {
     let imageURL = new URL(this.viewURL);
     imageURL.searchParams.append("image", obsId);
-    imageURL.searchParams.append("raft", "R22")
+    imageURL.searchParams.append("raft", this.defaultRaft)
     return imageURL;
   }
+
   _countRafts(mask) {
     let n = 0;
     for (let i = 0; i < 25; i++) {
@@ -238,29 +241,20 @@ export class CCSHeader extends LitElement {
   static get properties() {
     return {
       title: { type: String, notify: true, reflect: true },
+      bimage: { type: String, notify: true, reflect: true },
     };
   }
 
   constructor() {
     super();
     this.title = "CCS";
+    this.bimage = "images/1128172018_HDR.jpg";
   }
 
   render() {
     return html`
       <custom-style>
-        <style is="custom-style">
-          app-header {
-            --app-header-background-front-layer: {
-              background-image: url("images/1128172018_HDR.jpg");
-              background-position: left center;
-            }
-            --app-header-background-rear-layer: {
-              background-image: url("images/bg2.jpg");
-              background-position: left center;
-            }
-          }
-        </style>
+          ${this._style()}
       </custom-style>
       <app-header-layout>
         <app-header condenses fixed effects="waterfall resize-title blend-background parallax-background">
@@ -275,6 +269,23 @@ export class CCSHeader extends LitElement {
         <slot></slot>
       </div>
     </app-header-layout>
+    `;
+  }
+
+  _style() {
+    return html`
+      <style is="custom-style">
+          app-header {
+            --app-header-background-front-layer: {
+              background-image: url(${this.bimage});
+              background-position: left center;
+            }
+            --app-header-background-rear-layer: {
+              background-image: url("images/bg2.jpg");
+              background-position: left center;
+            }
+          }
+        </style>
     `;
   }
 }

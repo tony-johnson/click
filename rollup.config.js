@@ -24,6 +24,7 @@ const copyConfig = {
     { src: 'sound', dest: 'build-modern' },
     { src: 'auxtel.html', dest: 'build-modern', transform: (contents) => contents.toString().replace('./recent-images.js', './recent-images.bundled.js') },
     { src: 'comcam.html', dest: 'build-modern', transform: (contents) => contents.toString().replace('./recent-images.js', './recent-images.bundled.js')},
+    { src: 'index.html', dest: 'build-modern', transform: (contents) => contents.toString().replace('./recent-images.js', './recent-images.bundled.js')},
   ],
 };
 
