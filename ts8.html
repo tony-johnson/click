@@ -1,0 +1,27 @@
+<!doctype html>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>TS8 recent images</title>
+    <script type="module" src="./recent-images.js"></script>
+    <custom-style>
+      <style is="custom-style">
+        p {
+          border: solid 1px blue;
+          padding: 8px;
+        }
+
+      </style>
+    </custom-style>
+  </head>
+
+  <body>
+    <ccs-header title="Recent TS8 Images" bimage="images/maincamera.jpg">
+      <recent-images rows=40 hiddenColumns='[]' defaultRaft="all" baseURL="https://lsst-camera-dev.slac.stanford.edu/FITSInfo/" site="maincamera" filter='["telCode", "=", "TS"]'>
+      </recent-images>
+    </ccs-header>
+  </body>
+
+  </html>
